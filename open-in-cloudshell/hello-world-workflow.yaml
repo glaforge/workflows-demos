@@ -1,0 +1,4 @@
+- hello:
+    call: sys.log
+    args:
+        text: Hello Workflows World!
