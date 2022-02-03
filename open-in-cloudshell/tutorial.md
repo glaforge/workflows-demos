@@ -61,7 +61,8 @@ To deploy the workflow, execute the following command in the shell:
 ```bash
 gcloud workflows deploy hello-world-workflow \
   --source=hello-world-workflow.yaml \
-  --location=europe-west1
+  --location=europe-west1 \
+  --project=<walkthrough-project-id/>
 ```
 
 The workflow will be deployed in the `europe-west1` region,
@@ -74,6 +75,24 @@ but you can also pick from:
 * `us-central1` (Iowa)
 * `us-east1` (South Carolina)
 
+You should see an output similar to the following one:
+
+```
+Waiting for operation [operation-1643902570147-5d71ee4bd2d0b-406a7840-b007194b] to complete...done.   
+createTime: '2022-02-03T15:36:10.340979362Z'
+name: projects/<walkthrough-project-id/>/locations/europe-west1/workflows/hello-world-workflow
+revisionCreateTime: '2022-02-03T15:36:10.373188680Z'
+revisionId: 000001-061
+serviceAccount: projects/<walkthrough-project-id/>/serviceAccounts/783131360595-compute@developer.gserviceaccount.com
+sourceContents: |
+  - hello:
+      call: sys.log
+      args:
+          text: Hello Workflows World!
+state: ACTIVE
+updateTime: '2022-02-03T15:36:10.810361998Z'
+```
+
 Once deployed successfully, you will create the first execution of the workflow.
 
 ## Execute the workflow
@@ -81,11 +100,25 @@ Once deployed successfully, you will create the first execution of the workflow.
 Create the first execution of your workflow with the following command:
 
 ```bash
-gcloud workflows run hello-world-workflow
+gcloud workflows run hello-world-workflow \
+  --project=<walkthrough-project-id/>
 ```
 
 You can use `run` command as above to execute the workflow and wait for the execution to complete,
 or the `execute` command to launch the execution without waiting for the execution attempt to finish.
+
+A successful run attempt should give you the following output:
+
+```
+Waiting for execution [3e5cc9fe-5685-4b3f-885e-3f03274905df] to complete...done.     
+argument: 'null'
+endTime: '2022-02-03T15:40:52.966351644Z'
+name: projects/783131360595/locations/europe-west1/workflows/hello-world-workflow/executions/3e5cc9fe-5685-4b3f-885e-3f03274905df
+result: 'null'
+startTime: '2022-02-03T15:40:52.647741619Z'
+state: SUCCEEDED
+workflowRevisionId: 000001-061
+```
 
 ## Conclusion
 
