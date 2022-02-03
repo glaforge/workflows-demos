@@ -1,9 +1,0 @@
-# Run the following commands:
-
-# Enable the Workflows API
-gcloud services enable workflows.googleapis.com
-
-# Deploy the workflow of this repository
-gcloud workflows deploy hello-world-workflow \
-  --source=hello-world-workflow.yaml \
-  --location=europe-west1
