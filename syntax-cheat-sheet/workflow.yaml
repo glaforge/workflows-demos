@@ -26,7 +26,7 @@ main:
         assign:
           - my_integer: 1      # 64 bit, signed
           - my_double: 4.1     # 64 bit, signed floating point number
-          - my_string: "hello" # unicode <= 64kB length
+          - my_string: "hello" # unicode <= 256 KB length
           - my_boolean: true   # true/false, True/False, TRUE/FALSE
           - my_null: null
           - my_list: ["zero","one","two"]
@@ -60,6 +60,7 @@ main:
         assign:
           - my_list: ["zero","one","two"]
           - my_list_len: ${len(my_list)}
+          - key_exists: ${"Key1" in my_list}
           - my_list[0]: 0
           - idx: 0
           - my_list[idx + 1]: 1
@@ -74,9 +75,11 @@ main:
           - map_len: ${len(my_map)}
           - key_exists: ${"Key1" in my_map}
           - key_list: ${keys(my_map)}
+          - key_is_null: ${default(map.get(my_map, "Key1"), "Couldn't find key!")}
+          - key_with_special_char: '${"foo" + var.key["special!key"]}'
+          - key_str: "Key"
           - my_map.Key1: "Value1"
           - my_map["Key2"]: "Value2"
-          - key_str: "Key"
           - my_map[key_str + "3"]: "Value3"
           - my_nested_map: {"NestedMapKey": {"Key1":"Value1"}}
           - my_nested_map.NestedMapKey.Key2: "Value2"
@@ -139,12 +142,56 @@ main:
                       - sumRange:
                           assign:
                               - sum: ${sum + v}
+    # Parallel branches
+    - init:
+        assign:
+          - user: {}
+          - notification: {}
+    - parallel_branches:
+        parallel:
+          shared: [user, notification]
+          branches:
+            - getUser:
+                steps:
+                  - getUserCall:
+                      call: http.get
+                      args:
+                        url: ${"https://example.com/users/" + args.userId}
+                      result: user
+            - getNotification:
+                steps:
+                  - getNotificationCall:
+                      call: http.get
+                      args:
+                        url: ${"https://example.com/notification/" + args.notificationId}
+                      result: notification
+    # Parallel iteration
+    - init:
+        assign:
+          - total: 0
+    - parallel_loop:
+        parallel:
+          shared: [total]
+          for:
+            value: postId
+            in: ${args.posts}
+            steps:
+              - getPostCommentCount:
+                  call: http.get
+                  args:
+                    url: ${"https://example.com/postComments/" + postId}
+                  result: numComments
+              - add:
+                  assign:
+                    - total: ${total + numComments}                    
     # Conditions
     - switch_basic:
         switch:
           - condition: ${my_integer < 10}
             next: switch_embedded_steps
           - condition: ${my_boolean}
+            next: switch_embedded_steps
+          - condition: true # optional, default condition
             next: switch_embedded_steps
         next: switch_embedded_steps
     - switch_embedded_steps:
@@ -161,9 +208,12 @@ main:
     - call_subworkflow:
         call: subworkflow_name_message
         args:
-            first_name: "Sherlock"
-            last_name: "Holmes"
+            first_name: "Ada"
+            last_name: "Lovelace"
         result: output
+    - call_subworkflow2:
+        assign:
+          - output2: ${subworkflow_name_message("Sherlock","Holmes")}
     # Raise errors
     - raise_custom_string_error:
         raise: "Something went wrong."

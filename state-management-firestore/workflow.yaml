@@ -1,0 +1,134 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# An example that shows how to use Firestore to store Workflows state as
+# key/value pairs. The workflow name is used as the collection name and the
+# execution ID is used as the document name in Firestore.
+
+main:
+  steps:
+    - put_string_value:
+        call: firestore_put
+        args:
+            key: "key1"
+            value: "value1"
+    - get_string_value:
+        call: firestore_get
+        args:
+            key: "key1"
+        result: string_value
+    - put_boolean_value:
+        call: firestore_put
+        args:
+            key: "key2"
+            value: true
+            valueType: "boolean"
+    - get_boolean_value:
+        call: firestore_get
+        args:
+            key: "key2"
+            valueType: "boolean"
+        result: boolean_value
+    - put_integer_value:
+        call: firestore_put
+        args:
+            key: "key3"
+            value: 1
+            valueType: "integer"
+    - get_integer_value:
+        call: firestore_get
+        args:
+            key: "key3"
+            valueType: "integer"
+        result: integer_value
+    - put_double_value:
+        call: firestore_put
+        args:
+            key: "key4"
+            value: 1.5
+            valueType: "double"
+    - get_double_value:
+        call: firestore_get
+        args:
+            key: "key4"
+            valueType: "double"
+        result: double_value
+    - get_nonexisting_key:
+        call: firestore_get
+        args:
+            key: "nonexisting"
+        result: nonexisting_value
+    # Optionally, you can clear the keys
+    # - clear_keys:
+    #     call: firestore_clear
+    - return_values:
+        return:
+            string_value: ${string_value}
+            boolean_value: ${boolean_value}
+            integer_value: ${integer_value}
+            double_value: ${double_value}
+            nonexisting_value: ${nonexisting_value}
+
+# Puts key/value pair.
+firestore_put:
+    params: [key, value, valueType: "string"]
+    steps:
+        - init:
+            assign:
+            - database_root: ${"projects/" + sys.get_env("GOOGLE_CLOUD_PROJECT_ID") + "/databases/(default)/documents/" + sys.get_env("GOOGLE_CLOUD_WORKFLOW_ID") + "/"}
+            - doc_name: ${database_root + "key-value-store"}
+        - store:
+            call: googleapis.firestore.v1.projects.databases.documents.patch
+            args:
+                name: ${doc_name}
+                updateMask:
+                    fieldPaths: ["${key}"]
+                body:
+                    fields:
+                        ${key}:
+                            ${valueType + "Value"}: ${value}
+
+# Gets the value associated with the key and value type
+# Null if the key does not exist or if the value type does not match
+firestore_get:
+    params: [key, valueType: "string"]
+    steps:
+        - init:
+            assign:
+            - database_root: ${"projects/" + sys.get_env("GOOGLE_CLOUD_PROJECT_ID") + "/databases/(default)/documents/" + sys.get_env("GOOGLE_CLOUD_WORKFLOW_ID") + "/"}
+            - doc_name: ${database_root + "key-value-store"}
+        - get:
+            call: googleapis.firestore.v1.projects.databases.documents.get
+            args:
+                name: ${doc_name}
+                mask:
+                    fieldPaths: ["${key}"]
+            result: getResult
+        - return_value:
+            switch:
+            - condition: ${not("fields" in getResult)}
+              return: null
+            - condition: true
+              return: ${getResult.fields[key][valueType + "Value"]}
+
+firestore_clear:
+    steps:
+        - init:
+            assign:
+            - database_root: ${"projects/" + sys.get_env("GOOGLE_CLOUD_PROJECT_ID") + "/databases/(default)/documents/" + sys.get_env("GOOGLE_CLOUD_WORKFLOW_ID") + "/"}
+            - doc_name: ${database_root + "key-value-store"}
+        - drop:
+            call: googleapis.firestore.v1.projects.databases.documents.delete
+            args:
+                name: ${doc_name}
